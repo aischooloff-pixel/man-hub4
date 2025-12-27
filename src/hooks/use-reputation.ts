@@ -12,7 +12,22 @@ export interface ReputationEntry {
 
 function getInitData() {
   // @ts-ignore
-  return window.Telegram?.WebApp?.initData || '';
+  const tg = window.Telegram?.WebApp;
+  return tg?.initData || '';
+}
+
+async function extractEdgeErrorMessage(err: any): Promise<string> {
+  try {
+    const res = err?.context;
+    if (res && typeof res.json === 'function') {
+      const body = await res.json().catch(() => null);
+      const msg = body?.error || body?.message;
+      if (msg) return String(msg);
+    }
+  } catch {
+    // ignore
+  }
+  return err?.message || 'Ошибка запроса к серверу';
 }
 
 export function useReputation() {
@@ -28,7 +43,10 @@ export function useReputation() {
         body: { initData },
       });
 
-      if (error) throw error;
+      if (error) {
+        const msg = await extractEdgeErrorMessage(error);
+        throw new Error(msg);
+      }
 
       return {
         reputation: data?.reputation || 0,
@@ -41,6 +59,9 @@ export function useReputation() {
       setLoading(false);
     }
   }, []);
+
+  return { getMyReputation, loading };
+}
 
   return { getMyReputation, loading };
 }

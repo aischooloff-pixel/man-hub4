@@ -49,7 +49,22 @@ export interface CreateArticleData {
 
 function getInitData() {
   // @ts-ignore
-  return window.Telegram?.WebApp?.initData || '';
+  const tg = window.Telegram?.WebApp;
+  return tg?.initData || '';
+}
+
+async function extractEdgeErrorMessage(err: any): Promise<string> {
+  try {
+    const res = err?.context;
+    if (res && typeof res.json === 'function') {
+      const body = await res.json().catch(() => null);
+      const msg = body?.error || body?.message;
+      if (msg) return String(msg);
+    }
+  } catch {
+    // ignore
+  }
+  return err?.message || 'Ошибка запроса к серверу';
 }
 
 export function useArticles() {
@@ -86,7 +101,11 @@ export function useArticles() {
         body: { initData },
       });
 
-      if (error) throw error;
+      if (error) {
+        const msg = await extractEdgeErrorMessage(error);
+        throw new Error(msg);
+      }
+
       return (data?.articles || []) as Article[];
     } catch (err) {
       console.error('Error fetching user articles:', err);
@@ -109,8 +128,8 @@ export function useArticles() {
       });
 
       if (error) {
-        console.error('Error creating article:', error);
-        throw error;
+        const msg = await extractEdgeErrorMessage(error);
+        throw new Error(msg);
       }
 
       if (!data?.article) {
@@ -130,7 +149,7 @@ export function useArticles() {
       return data.article;
     } catch (err: any) {
       console.error('Error creating article:', err);
-      toast.error(err.message || 'Ошибка создания статьи');
+      toast.error(err?.message || 'Ошибка создания статьи');
       return null;
     } finally {
       setLoading(false);

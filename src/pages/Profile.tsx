@@ -18,7 +18,7 @@ import { useTelegram } from '@/hooks/use-telegram';
 import { toast } from 'sonner';
 
 export default function Profile() {
-  const { profile, loading: profileLoading, articlesCount, updateSocialLinks } = useProfile();
+  const { profile, loading: profileLoading, error: profileError, articlesCount, updateSocialLinks, refetch } = useProfile();
   const { getUserArticles } = useArticles();
   const { getMyReputation } = useReputation();
   const { openTelegramLink, getBotUsername } = useTelegram();
@@ -144,8 +144,13 @@ export default function Profile() {
       <div className="min-h-screen bg-background pb-24 pt-16">
         <Header />
         <main className="py-6 px-4">
-          <div className="text-center py-12">
-            <p className="text-muted-foreground mb-4">Откройте приложение через Telegram бота для авторизации</p>
+          <div className="text-center py-12 space-y-4">
+            <p className="text-muted-foreground">
+              {profileError ? `Ошибка авторизации: ${profileError}` : 'Откройте приложение через Telegram бота для авторизации'}
+            </p>
+            <Button variant="outline" onClick={refetch}>
+              Повторить
+            </Button>
           </div>
         </main>
         <BottomNav />

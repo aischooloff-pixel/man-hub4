@@ -19,6 +19,20 @@ export interface Profile {
   show_username: boolean;
 }
 
+async function extractEdgeErrorMessage(err: any): Promise<string> {
+  try {
+    const res = err?.context;
+    if (res && typeof res.json === 'function') {
+      const body = await res.json().catch(() => null);
+      const msg = body?.error || body?.message;
+      if (msg) return String(msg);
+    }
+  } catch {
+    // ignore
+  }
+  return err?.message || 'Ошибка запроса к серверу';
+}
+
 export function useProfile() {
   const { webApp } = useTelegram();
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -27,14 +41,22 @@ export function useProfile() {
   const [articlesCount, setArticlesCount] = useState(0);
 
   const getInitData = useCallback(() => {
+    // Prefer the WebApp instance we captured in useTelegram (it becomes reliable after tg.ready())
+    const initData = webApp?.initData;
     // @ts-ignore
-    return window.Telegram?.WebApp?.initData || '';
-  }, []);
+    return initData || window.Telegram?.WebApp?.initData || '';
+  }, [webApp]);
 
   // Sync profile with backend (validates initData server-side)
   const syncProfile = useCallback(async () => {
     const initData = getInitData();
+
     if (!initData) {
+      setProfile(null);
+      setArticlesCount(0);
+      setError(
+        'Нет данных Telegram (initData). Откройте мини‑приложение из чата бота и попробуйте ещё раз.'
+      );
       setLoading(false);
       return;
     }
@@ -47,7 +69,10 @@ export function useProfile() {
         body: { initData },
       });
 
-      if (fnError) throw fnError;
+      if (fnError) {
+        const msg = await extractEdgeErrorMessage(fnError);
+        throw new Error(msg);
+      }
 
       if (data?.profile) {
         setProfile({
@@ -59,10 +84,16 @@ export function useProfile() {
           show_username: data.profile.show_username ?? true,
         });
         setArticlesCount(data.articlesCount || 0);
+      } else {
+        setProfile(null);
+        setArticlesCount(0);
+        setError('Профиль не найден. Попробуйте обновить страницу и открыть мини‑приложение заново.');
       }
     } catch (err: any) {
       console.error('Profile sync error:', err);
-      setError(err.message || 'Ошибка синхронизации профиля');
+      setError(err?.message || 'Ошибка синхронизации профиля');
+      setProfile(null);
+      setArticlesCount(0);
     } finally {
       setLoading(false);
     }
@@ -100,7 +131,10 @@ export function useProfile() {
           body: { initData, ...settings },
         });
 
-        if (fnError) throw fnError;
+        if (fnError) {
+          const msg = await extractEdgeErrorMessage(fnError);
+          throw new Error(msg);
+        }
 
         if (data?.profile) {
           setProfile({
@@ -120,8 +154,9 @@ export function useProfile() {
   );
 
   useEffect(() => {
+    if (!webApp) return;
     syncProfile();
-  }, [syncProfile]);
+  }, [webApp, syncProfile]);
 
   return {
     profile,
