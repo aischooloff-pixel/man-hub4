@@ -8,3 +8,15 @@ verify_jwt = false
 
 [functions.tg-support]
 verify_jwt = false
+
+[functions.tg-toggle-like]
+verify_jwt = false
+
+[functions.tg-toggle-favorite]
+verify_jwt = false
+
+[functions.tg-add-comment]
+verify_jwt = false
+
+[functions.tg-get-article-state]
+verify_jwt = false

@@ -221,6 +221,105 @@ export function useArticles() {
     }
   }, []);
 
+  // Toggle like
+  const toggleLike = useCallback(async (articleId: string) => {
+    const initData = getInitData();
+    if (!initData) {
+      toast.error('Необходимо авторизоваться через Telegram');
+      return null;
+    }
+
+    try {
+      const { data, error } = await supabase.functions.invoke('tg-toggle-like', {
+        body: { initData, articleId },
+      });
+
+      if (error) {
+        const msg = await extractEdgeErrorMessage(error);
+        throw new Error(msg);
+      }
+
+      return data;
+    } catch (err: any) {
+      console.error('Error toggling like:', err);
+      toast.error(err?.message || 'Ошибка');
+      return null;
+    }
+  }, []);
+
+  // Toggle favorite
+  const toggleFavorite = useCallback(async (articleId: string) => {
+    const initData = getInitData();
+    if (!initData) {
+      toast.error('Необходимо авторизоваться через Telegram');
+      return null;
+    }
+
+    try {
+      const { data, error } = await supabase.functions.invoke('tg-toggle-favorite', {
+        body: { initData, articleId },
+      });
+
+      if (error) {
+        const msg = await extractEdgeErrorMessage(error);
+        throw new Error(msg);
+      }
+
+      return data;
+    } catch (err: any) {
+      console.error('Error toggling favorite:', err);
+      toast.error(err?.message || 'Ошибка');
+      return null;
+    }
+  }, []);
+
+  // Add comment
+  const addComment = useCallback(async (articleId: string, body: string) => {
+    const initData = getInitData();
+    if (!initData) {
+      toast.error('Необходимо авторизоваться через Telegram');
+      return null;
+    }
+
+    try {
+      const { data, error } = await supabase.functions.invoke('tg-add-comment', {
+        body: { initData, articleId, body },
+      });
+
+      if (error) {
+        const msg = await extractEdgeErrorMessage(error);
+        throw new Error(msg);
+      }
+
+      return data;
+    } catch (err: any) {
+      console.error('Error adding comment:', err);
+      toast.error(err?.message || 'Ошибка');
+      return null;
+    }
+  }, []);
+
+  // Get article state (like/favorite status, comments)
+  const getArticleState = useCallback(async (articleId: string) => {
+    const initData = getInitData();
+
+    try {
+      const { data, error } = await supabase.functions.invoke('tg-get-article-state', {
+        body: { initData, articleId },
+      });
+
+      if (error) {
+        console.error('Error getting article state:', error);
+        return { isLiked: false, isFavorited: false, comments: [] };
+      }
+
+      return data;
+    } catch (err) {
+      console.error('Error getting article state:', err);
+      return { isLiked: false, isFavorited: false, comments: [] };
+    }
+  }, []);
+
   return {
     loading,
     getApprovedArticles,
@@ -228,5 +327,9 @@ export function useArticles() {
     createArticle,
     updateArticle,
     deleteArticle,
+    toggleLike,
+    toggleFavorite,
+    addComment,
+    getArticleState,
   };
 }

@@ -1,49 +1,92 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X, Heart, MessageCircle, Bookmark, Send, Loader2, Crown, Calendar, FileText, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Article } from '@/types';
 import { cn } from '@/lib/utils';
+import { useArticles } from '@/hooks/use-articles';
+
+interface Comment {
+  id: string;
+  body: string;
+  created_at: string;
+  author?: {
+    id: string;
+    first_name: string | null;
+    last_name: string | null;
+    username: string | null;
+    avatar_url: string | null;
+    is_premium: boolean | null;
+  } | null;
+}
 
 interface ArticleDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
   article: Article | null;
-  onLike?: (articleId: string) => void;
-  onFavorite?: (articleId: string) => void;
-  onComment?: (articleId: string, comment: string) => void;
 }
 
 export function ArticleDetailModal({
   isOpen,
   onClose,
   article,
-  onLike,
-  onFavorite,
-  onComment,
 }: ArticleDetailModalProps) {
   const [comment, setComment] = useState('');
   const [isLiked, setIsLiked] = useState(false);
   const [isFavorited, setIsFavorited] = useState(false);
+  const [likesCount, setLikesCount] = useState(0);
+  const [favoritesCount, setFavoritesCount] = useState(0);
+  const [comments, setComments] = useState<Comment[]>([]);
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+  const [isLoadingState, setIsLoadingState] = useState(false);
+
+  const { toggleLike, toggleFavorite, addComment, getArticleState } = useArticles();
+
+  useEffect(() => {
+    if (isOpen && article) {
+      setLikesCount(article.likes_count || 0);
+      setFavoritesCount(article.favorites_count || 0);
+      setIsLiked(false);
+      setIsFavorited(false);
+      setComments([]);
+      
+      // Load article state
+      setIsLoadingState(true);
+      getArticleState(article.id).then((state) => {
+        setIsLiked(state.isLiked);
+        setIsFavorited(state.isFavorited);
+        setComments(state.comments || []);
+        setIsLoadingState(false);
+      });
+    }
+  }, [isOpen, article, getArticleState]);
 
   if (!isOpen || !article) return null;
 
-  const handleLike = () => {
-    setIsLiked(!isLiked);
-    onLike?.(article.id);
+  const handleLike = async () => {
+    const result = await toggleLike(article.id);
+    if (result) {
+      setIsLiked(result.isLiked);
+      setLikesCount(result.likesCount);
+    }
   };
 
-  const handleFavorite = () => {
-    setIsFavorited(!isFavorited);
-    onFavorite?.(article.id);
+  const handleFavorite = async () => {
+    const result = await toggleFavorite(article.id);
+    if (result) {
+      setIsFavorited(result.isFavorited);
+      setFavoritesCount(result.favoritesCount);
+    }
   };
 
   const handleSubmitComment = async () => {
     if (!comment.trim()) return;
     setIsSubmittingComment(true);
-    await onComment?.(article.id, comment);
-    setComment('');
+    const result = await addComment(article.id, comment);
+    if (result?.comment) {
+      setComments([...comments, result.comment]);
+      setComment('');
+    }
     setIsSubmittingComment(false);
   };
 
@@ -52,6 +95,15 @@ export function ArticleDetailModal({
       day: 'numeric',
       month: 'long',
       year: 'numeric',
+    });
+  };
+
+  const formatCommentDate = (dateString: string) => {
+    return new Date(dateString).toLocaleString('ru-RU', {
+      day: 'numeric',
+      month: 'short',
+      hour: '2-digit',
+      minute: '2-digit',
     });
   };
 
@@ -188,27 +240,61 @@ export function ArticleDetailModal({
             </div>
           </div>
 
+          {/* Comments Section */}
+          {comments.length > 0 && (
+            <div className="border-t border-border p-4">
+              <h3 className="text-sm font-medium mb-3">Комментарии ({comments.length})</h3>
+              <div className="space-y-3">
+                {comments.map((c) => (
+                  <div key={c.id} className="flex gap-3">
+                    <img
+                      src={c.author?.avatar_url || '/placeholder.svg'}
+                      alt=""
+                      className="h-8 w-8 rounded-full object-cover shrink-0"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium">
+                          {c.author?.first_name || 'Пользователь'}
+                        </span>
+                        {c.author?.is_premium && (
+                          <Crown className="h-3 w-3 text-yellow-500" />
+                        )}
+                        <span className="text-xs text-muted-foreground">
+                          {formatCommentDate(c.created_at)}
+                        </span>
+                      </div>
+                      <p className="text-sm text-foreground mt-0.5">{c.body}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Action Bar */}
           <div className="sticky bottom-0 border-t border-border bg-card p-4">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-4">
                 <button
                   onClick={handleLike}
+                  disabled={isLoadingState}
                   className={cn(
                     'flex items-center gap-1.5 transition-colors',
                     isLiked ? 'text-red-500' : 'text-muted-foreground hover:text-red-500'
                   )}
                 >
                   <Heart className={cn('h-6 w-6', isLiked && 'fill-current')} />
-                  <span className="text-sm font-medium">{article.likes_count + (isLiked ? 1 : 0)}</span>
+                  <span className="text-sm font-medium">{likesCount}</span>
                 </button>
                 <button className="flex items-center gap-1.5 text-muted-foreground hover:text-primary transition-colors">
                   <MessageCircle className="h-6 w-6" />
-                  <span className="text-sm font-medium">{article.comments_count}</span>
+                  <span className="text-sm font-medium">{comments.length}</span>
                 </button>
               </div>
               <button
                 onClick={handleFavorite}
+                disabled={isLoadingState}
                 className={cn(
                   'transition-colors',
                   isFavorited ? 'text-primary' : 'text-muted-foreground hover:text-primary'
@@ -219,7 +305,7 @@ export function ArticleDetailModal({
             </div>
 
             {/* Comment Input */}
-            {article.allow_comments && (
+            {article.allow_comments !== false && (
               <div className="flex gap-2">
                 <Input
                   value={comment}
