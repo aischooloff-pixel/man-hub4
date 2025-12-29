@@ -149,6 +149,54 @@ export type Database = {
           },
         ]
       }
+      article_reports: {
+        Row: {
+          article_id: string
+          created_at: string
+          id: string
+          reason: string
+          reporter_profile_id: string
+          reviewed_at: string | null
+          reviewed_by_telegram_id: number | null
+          status: string
+        }
+        Insert: {
+          article_id: string
+          created_at?: string
+          id?: string
+          reason: string
+          reporter_profile_id: string
+          reviewed_at?: string | null
+          reviewed_by_telegram_id?: number | null
+          status?: string
+        }
+        Update: {
+          article_id?: string
+          created_at?: string
+          id?: string
+          reason?: string
+          reporter_profile_id?: string
+          reviewed_at?: string | null
+          reviewed_by_telegram_id?: number | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "article_reports_article_id_fkey"
+            columns: ["article_id"]
+            isOneToOne: false
+            referencedRelation: "articles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "article_reports_reporter_profile_id_fkey"
+            columns: ["reporter_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       articles: {
         Row: {
           allow_comments: boolean | null

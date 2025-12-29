@@ -320,6 +320,33 @@ export function useArticles() {
     }
   }, []);
 
+  // Report article
+  const reportArticle = useCallback(async (articleId: string, reason: string) => {
+    const initData = getInitData();
+    if (!initData) {
+      toast.error('Необходимо авторизоваться через Telegram');
+      return false;
+    }
+
+    try {
+      const { data, error } = await supabase.functions.invoke('tg-report-article', {
+        body: { initData, articleId, reason },
+      });
+
+      if (error) {
+        const msg = await extractEdgeErrorMessage(error);
+        throw new Error(msg);
+      }
+
+      toast.success('Жалоба отправлена');
+      return true;
+    } catch (err: any) {
+      console.error('Error reporting article:', err);
+      toast.error(err?.message || 'Ошибка отправки жалобы');
+      return false;
+    }
+  }, []);
+
   return {
     loading,
     getApprovedArticles,
@@ -331,5 +358,6 @@ export function useArticles() {
     toggleFavorite,
     addComment,
     getArticleState,
+    reportArticle,
   };
 }

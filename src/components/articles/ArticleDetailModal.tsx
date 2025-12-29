@@ -1,10 +1,21 @@
 import { useState, useEffect } from 'react';
-import { X, Heart, MessageCircle, Bookmark, Send, Loader2, Crown, Calendar, FileText, Star } from 'lucide-react';
+import { X, Heart, MessageCircle, Bookmark, Send, Loader2, Crown, Calendar, FileText, Star, Flag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Article } from '@/types';
 import { cn } from '@/lib/utils';
 import { useArticles } from '@/hooks/use-articles';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 interface Comment {
   id: string;
@@ -39,8 +50,11 @@ export function ArticleDetailModal({
   const [comments, setComments] = useState<Comment[]>([]);
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const [isLoadingState, setIsLoadingState] = useState(false);
+  const [isReportOpen, setIsReportOpen] = useState(false);
+  const [reportReason, setReportReason] = useState('');
+  const [isSubmittingReport, setIsSubmittingReport] = useState(false);
 
-  const { toggleLike, toggleFavorite, addComment, getArticleState } = useArticles();
+  const { toggleLike, toggleFavorite, addComment, getArticleState, reportArticle } = useArticles();
 
   useEffect(() => {
     if (isOpen && article) {
@@ -88,6 +102,17 @@ export function ArticleDetailModal({
       setComment('');
     }
     setIsSubmittingComment(false);
+  };
+
+  const handleSubmitReport = async () => {
+    if (!reportReason.trim()) return;
+    setIsSubmittingReport(true);
+    const success = await reportArticle(article.id, reportReason);
+    setIsSubmittingReport(false);
+    if (success) {
+      setIsReportOpen(false);
+      setReportReason('');
+    }
   };
 
   const formatDate = (dateString: string) => {
@@ -292,16 +317,25 @@ export function ArticleDetailModal({
                   <span className="text-sm font-medium">{comments.length}</span>
                 </button>
               </div>
-              <button
-                onClick={handleFavorite}
-                disabled={isLoadingState}
-                className={cn(
-                  'transition-colors',
-                  isFavorited ? 'text-primary' : 'text-muted-foreground hover:text-primary'
-                )}
-              >
-                <Bookmark className={cn('h-6 w-6', isFavorited && 'fill-current')} />
-              </button>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setIsReportOpen(true)}
+                  className="text-muted-foreground hover:text-destructive transition-colors"
+                  title="Пожаловаться"
+                >
+                  <Flag className="h-5 w-5" />
+                </button>
+                <button
+                  onClick={handleFavorite}
+                  disabled={isLoadingState}
+                  className={cn(
+                    'transition-colors',
+                    isFavorited ? 'text-primary' : 'text-muted-foreground hover:text-primary'
+                  )}
+                >
+                  <Bookmark className={cn('h-6 w-6', isFavorited && 'fill-current')} />
+                </button>
+              </div>
             </div>
 
             {/* Comment Input */}
@@ -330,6 +364,35 @@ export function ArticleDetailModal({
           </div>
         </div>
       </div>
+
+      {/* Report Dialog */}
+      <AlertDialog open={isReportOpen} onOpenChange={setIsReportOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Пожаловаться на статью</AlertDialogTitle>
+            <AlertDialogDescription>
+              Опишите причину жалобы. Модераторы рассмотрят ваше обращение.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <Textarea
+            value={reportReason}
+            onChange={(e) => setReportReason(e.target.value)}
+            placeholder="Причина жалобы..."
+            className="min-h-[100px]"
+          />
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setReportReason('')}>Отмена</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleSubmitReport}
+              disabled={!reportReason.trim() || isSubmittingReport}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isSubmittingReport ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              Отправить
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

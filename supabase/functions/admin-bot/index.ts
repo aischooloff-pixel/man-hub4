@@ -133,6 +133,7 @@ async function handleStart(chatId: number, userId: number) {
 👑 /premium — Управление подписками
 📝 /pending — Статьи на модерации
 📰 /st — Список статей
+🚨 /zb — Жалобы на статьи
 ❓ /questions — Вопросы в поддержку
 📢 /broadcast — Рассылка всем пользователям
 🎙 /podc — Управление подкастами
@@ -2309,7 +2310,115 @@ async function handleCallbackQuery(callbackQuery: any) {
     await handleViewComments(callbackQuery, param, parseInt(param2 || '0'));
   } else if (action === 'del_comment') {
     await handleDeleteComment(callbackQuery, param, param2);
+  } else if (action === 'report_done') {
+    await handleReportDone(callbackQuery, param);
+  } else if (action === 'reports') {
+    await answerCallbackQuery(callbackQuery.id);
+    await handleReports(message.chat.id, from.id, parseInt(param || '0'), message.message_id);
   }
+}
+
+// Handle /zb - article reports
+async function handleReports(chatId: number, userId: number, page: number = 0, messageId?: number) {
+  if (!isAdmin(userId)) return;
+
+  const REPORTS_PER_PAGE = 10;
+  const from = page * REPORTS_PER_PAGE;
+
+  const { count: totalCount } = await supabase
+    .from('article_reports')
+    .select('*', { count: 'exact', head: true })
+    .eq('status', 'pending');
+
+  const { data: reports, error } = await supabase
+    .from('article_reports')
+    .select(`
+      id,
+      reason,
+      created_at,
+      article_id,
+      reporter_profile_id,
+      articles:article_id(id, title),
+      profiles:reporter_profile_id(telegram_id, username, first_name)
+    `)
+    .eq('status', 'pending')
+    .order('created_at', { ascending: false })
+    .range(from, from + REPORTS_PER_PAGE - 1);
+
+  if (error) {
+    console.error('Error fetching reports:', error);
+    await sendAdminMessage(chatId, '❌ Ошибка загрузки жалоб');
+    return;
+  }
+
+  const totalPages = Math.ceil((totalCount || 0) / REPORTS_PER_PAGE);
+
+  let message = `🚨 <b>Жалобы на статьи</b> (${totalCount || 0})\n`;
+  message += `📄 Страница ${page + 1}/${totalPages || 1}\n\n`;
+
+  if (!reports || reports.length === 0) {
+    message += '<i>Нет нерассмотренных жалоб</i>';
+  } else {
+    for (const report of reports) {
+      const art = (report as any).articles;
+      const rep = (report as any).profiles;
+      const date = new Date(report.created_at).toLocaleDateString('ru-RU');
+      message += `📝 <b>${art?.title || 'Статья удалена'}</b>\n`;
+      message += `   👤 От: ${rep?.username ? '@' + rep.username : rep?.first_name || 'ID:' + rep?.telegram_id}\n`;
+      message += `   📋 ${(report.reason || '').substring(0, 60)}${(report.reason || '').length > 60 ? '...' : ''}\n`;
+      message += `   📅 ${date}\n\n`;
+    }
+  }
+
+  // Build keyboard
+  const buttons: any[][] = [];
+  if (reports && reports.length > 0) {
+    for (const report of reports) {
+      const art = (report as any).articles;
+      buttons.push([{ text: `✅ Рассмотрено: ${(art?.title || 'Статья').substring(0, 20)}`, callback_data: `report_done:${report.id}` }]);
+    }
+  }
+
+  // Pagination
+  const prevPage = page > 0 ? page - 1 : page;
+  const nextPage = page < totalPages - 1 ? page + 1 : page;
+  if (totalPages > 1) {
+    buttons.push([
+      { text: '⬅️ Назад', callback_data: `reports:${prevPage}` },
+      { text: 'Вперёд ➡️', callback_data: `reports:${nextPage}` },
+    ]);
+  }
+
+  const keyboard = { inline_keyboard: buttons };
+
+  if (messageId) {
+    await editAdminMessage(chatId, messageId, message, { reply_markup: keyboard });
+  } else {
+    await sendAdminMessage(chatId, message, { reply_markup: keyboard });
+  }
+}
+
+// Handle report_done callback
+async function handleReportDone(callbackQuery: any, reportId: string) {
+  const { id, message, from } = callbackQuery;
+
+  const { error } = await supabase
+    .from('article_reports')
+    .update({
+      status: 'reviewed',
+      reviewed_at: new Date().toISOString(),
+      reviewed_by_telegram_id: from.id,
+    })
+    .eq('id', reportId);
+
+  if (error) {
+    console.error('Error marking report as done:', error);
+    await answerCallbackQuery(id, '❌ Ошибка обновления');
+    return;
+  }
+
+  await answerCallbackQuery(id, '✅ Жалоба рассмотрена');
+  await handleReports(message.chat.id, from.id, 0, message.message_id);
 }
 
 // Send new article notification to admin
@@ -2405,6 +2514,8 @@ Deno.serve(async (req) => {
         await handleSearchArticles(chat.id, from.id, '');
       } else if (text === '/questions') {
         await handleQuestions(chat.id, from.id);
+      } else if (text === '/zb') {
+        await handleReports(chat.id, from.id);
       } else if (text?.startsWith('/broadcast')) {
         await handleBroadcast(chat.id, from.id, text);
       } else if (text === '/podc') {

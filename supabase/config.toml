@@ -20,3 +20,6 @@ verify_jwt = false
 
 [functions.tg-get-article-state]
 verify_jwt = false
+
+[functions.tg-report-article]
+verify_jwt = false
