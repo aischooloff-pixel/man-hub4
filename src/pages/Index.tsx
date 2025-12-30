@@ -140,7 +140,7 @@ export default function Index() {
             <span className="text-4xl">🚫</span>
           </div>
           <h1 className="text-2xl font-bold text-destructive mb-4">Аккаунт заблокирован</h1>
-          <p className="text-muted-foreground mb-2">Вы не можете использовать BoysHub.</p>
+          <p className="text-muted-foreground mb-2">Вы не можете использовать ManHub.</p>
           <p className="text-sm text-muted-foreground">Если вы считаете, что это ошибка, обратитесь в поддержку.</p>
         </div>
       </div>

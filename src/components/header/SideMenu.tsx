@@ -53,23 +53,20 @@ export function SideMenu({ isOpen, onClose }: SideMenuProps) {
   };
 
   const handlePremiumClick = () => {
-    onClose();
-    if (isPremium) {
-      // TODO: Navigate to premium info link (to be provided)
-      setIsPremiumOpen(true);
-    } else {
-      setIsPremiumOpen(true);
-    }
+    setIsPremiumOpen(true);
   };
 
   const handleSettingsClick = () => {
-    onClose();
     setIsSettingsOpen(true);
   };
 
   const handleHelpClick = () => {
-    onClose();
     setIsSupportOpen(true);
+  };
+
+  const handleModalClose = (setter: (v: boolean) => void) => {
+    setter(false);
+    onClose();
   };
 
   const menuItems = [
@@ -170,9 +167,9 @@ export function SideMenu({ isOpen, onClose }: SideMenuProps) {
         </div>
       </div>
 
-      <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
-      <SupportModal isOpen={isSupportOpen} onClose={() => setIsSupportOpen(false)} />
-      <PremiumModal isOpen={isPremiumOpen} onClose={() => setIsPremiumOpen(false)} />
+      <SettingsModal isOpen={isSettingsOpen} onClose={() => handleModalClose(setIsSettingsOpen)} />
+      <SupportModal isOpen={isSupportOpen} onClose={() => handleModalClose(setIsSupportOpen)} />
+      <PremiumModal isOpen={isPremiumOpen} onClose={() => handleModalClose(setIsPremiumOpen)} />
     </>
   );
 }

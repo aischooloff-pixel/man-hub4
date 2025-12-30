@@ -122,7 +122,7 @@ async function handleStart(chatId: number, userId: number) {
     return;
   }
 
-  const welcomeMessage = `🔐 <b>BoysHub Admin Bot</b>
+  const welcomeMessage = `🔐 <b>ManHub Admin Bot</b>
 
 Добро пожаловать в админ-панель!
 
@@ -186,7 +186,7 @@ async function handleStats(chatId: number, userId: number) {
     rejected: articles?.filter(a => a.status === 'rejected').length || 0,
   };
 
-  const message = `📊 <b>Статистика BoysHub</b>
+  const message = `📊 <b>Статистика ManHub</b>
 
 👥 <b>Пользователей:</b> ${userCount || 0}
 👑 <b>Premium:</b> ${premiumCount || 0}
@@ -556,7 +556,7 @@ async function handlePremiumRevoke(callbackQuery: any, telegramId: string) {
 
 Ваша Premium подписка была отменена.
 
-Вы можете приобрести её снова в приложении BoysHub.`);
+Вы можете приобрести её снова в приложении ManHub.`);
 
   await answerCallbackQuery(id, '✅ Premium отозван');
   await editMessageReplyMarkup(message.chat.id, message.message_id);
@@ -722,7 +722,7 @@ async function handleBlockUser(callbackQuery: any, telegramId: string) {
   // Notify user
   await sendUserMessage(telegramId, `🚫 <b>Ваш аккаунт заблокирован</b>
 
-Вы больше не можете использовать BoysHub.
+Вы больше не можете использовать ManHub.
 
 Если вы считаете, что это ошибка, обратитесь в поддержку.`);
 
@@ -766,7 +766,7 @@ async function handleUnblockUser(callbackQuery: any, telegramId: string) {
   // Notify user
   await sendUserMessage(telegramId, `✅ <b>Ваш аккаунт разблокирован</b>
 
-Вы снова можете использовать BoysHub.`);
+Вы снова можете использовать ManHub.`);
 
   await answerCallbackQuery(id, '✅ Пользователь разблокирован');
   await editMessageReplyMarkup(message.chat.id, message.message_id);
@@ -2005,7 +2005,7 @@ async function handleApprove(callbackQuery: any, shortId: string) {
 
 📝 "${notifyLabel}"
 
-Статья опубликована и доступна для всех пользователей в приложении BoysHub.`
+Статья опубликована и доступна для всех пользователей в приложении ManHub.`
     );
   }
 

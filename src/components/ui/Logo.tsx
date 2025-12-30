@@ -17,11 +17,11 @@ export function Logo({ className, size = 'md' }: LogoProps) {
       <div className="relative flex h-8 w-8 items-center justify-center">
         <div className="absolute inset-0 rounded-lg bg-foreground" />
         <span className="relative z-10 font-heading text-sm font-bold text-background">
-          B
+          M
         </span>
       </div>
       <span className={cn('font-heading font-semibold tracking-tight', sizes[size])}>
-        BoySHub
+        ManHub
       </span>
     </div>
   );

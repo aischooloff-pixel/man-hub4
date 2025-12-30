@@ -7,7 +7,7 @@ interface WelcomeModalProps {
   onClose: () => void;
 }
 
-const WELCOME_STORAGE_KEY = 'boyshub_welcome_shown';
+const WELCOME_STORAGE_KEY = 'manhub_welcome_shown';
 
 export function WelcomeModal({ onClose }: WelcomeModalProps) {
   const [step, setStep] = useState(0);
@@ -15,7 +15,7 @@ export function WelcomeModal({ onClose }: WelcomeModalProps) {
   const steps = [
     {
       icon: BookOpen,
-      title: 'Добро пожаловать в BoysHub!',
+      title: 'Добро пожаловать в ManHub!',
       description: 'Платформа для обмена знаниями и опытом. Читайте статьи, слушайте подкасты и развивайтесь вместе с сообществом.',
     },
     {

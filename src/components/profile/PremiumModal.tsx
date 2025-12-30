@@ -51,6 +51,7 @@ export function PremiumModal({ isOpen, onClose }: PremiumModalProps) {
       price: { monthly: 2490, yearly: 24900 },
       originalPrice: { monthly: 4980, yearly: 49800 },
       features: [
+        { icon: Sparkles, text: 'Все что в Plus' },
         { icon: Crown, text: 'Сообщество предпринимателей' },
         { icon: GraduationCap, text: 'Менторство от основателя' },
         { icon: ShoppingBag, text: 'Продажа своего продукта' },
@@ -206,14 +207,15 @@ export function PremiumModal({ isOpen, onClose }: PremiumModalProps) {
                 </div>
 
                 <Button
-                  onClick={() => handlePayment(plan.id)}
+                  onClick={() => plan.id === 'free' ? null : (plan.id === 'plus' || plan.id === 'premium') ? null : handlePayment(plan.id)}
                   className={cn(
                     'w-full',
                     plan.id === 'free' ? 'variant-secondary' : ''
                   )}
                   variant={plan.id === 'free' ? 'secondary' : 'default'}
+                  disabled={plan.id === 'plus' || plan.id === 'premium'}
                 >
-                  {plan.id === 'free' ? 'Текущий план' : 'Выбрать'}
+                  {plan.id === 'free' ? 'Текущий план' : 'Скоро'}
                 </Button>
               </div>
             ))}
@@ -278,11 +280,12 @@ export function PremiumModal({ isOpen, onClose }: PremiumModalProps) {
                   </div>
 
                   <Button
-                    onClick={() => handlePayment(plan.id)}
+                    onClick={() => plan.id === 'free' ? null : null}
                     className="w-full"
                     variant={plan.id === 'free' ? 'secondary' : 'default'}
+                    disabled={plan.id === 'plus' || plan.id === 'premium'}
                   >
-                    {plan.id === 'free' ? 'Текущий план' : 'Выбрать'}
+                    {plan.id === 'free' ? 'Текущий план' : 'Скоро'}
                   </Button>
                 </div>
               ))}

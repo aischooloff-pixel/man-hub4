@@ -33,7 +33,7 @@ interface SearchArticle {
   author?: any;
 }
 
-const RECENT_SEARCHES_KEY = 'boyshub_recent_searches';
+const RECENT_SEARCHES_KEY = 'manhub_recent_searches';
 
 export function SearchModal({ isOpen, onClose }: SearchModalProps) {
   const [searchQuery, setSearchQuery] = useState('');

@@ -36,7 +36,7 @@ export function PremiumBanner({ className, onClick }: PremiumBannerProps) {
               Premium
             </h3>
             <p className="text-xs text-muted-foreground">
-              Получите максимум от BoySHub
+              Получите максимум от ManHub
             </p>
           </div>
         </div>

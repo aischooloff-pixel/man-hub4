@@ -19,7 +19,7 @@ export function AIAssistantChat({ isOpen, onClose }: AIAssistantChatProps) {
     {
       id: '1',
       role: 'assistant',
-      content: 'Привет! Я ИИ ассистент BoysHub. Чем могу помочь? Задавай вопросы о саморазвитии, бизнесе, продуктивности или других темах.',
+      content: 'Привет! Я ИИ ассистент ManHub. Чем могу помочь? Задавай вопросы о саморазвитии, бизнесе, продуктивности или других темах.',
     },
   ]);
   const [input, setInput] = useState('');

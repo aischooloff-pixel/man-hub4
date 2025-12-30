@@ -142,7 +142,7 @@ export default function Hub() {
             <span className="text-4xl">🚫</span>
           </div>
           <h1 className="text-2xl font-bold text-destructive mb-4">Аккаунт заблокирован</h1>
-          <p className="text-muted-foreground">Вы не можете использовать BoysHub.</p>
+          <p className="text-muted-foreground">Вы не можете использовать ManHub.</p>
         </div>
       </div>
     );

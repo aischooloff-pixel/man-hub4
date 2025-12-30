@@ -36,7 +36,7 @@ export function useTelegram() {
   const getBotUsername = (): string => {
     // Get bot username from start_param or hardcoded value
     // This should match the bot that has the mini app
-    return 'Boys_Hubbot';
+    return 'Man_Hubbot';
   };
 
   const getInitData = (): string | null => {

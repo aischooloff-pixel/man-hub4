@@ -80,7 +80,7 @@ async function handleStart(chatId: number, user: any, startParam?: string) {
   
   // Handle support start param
   if (startParam === 'support') {
-    await sendTelegramMessage(chatId, `💬 <b>Техническая поддержка BoysHub</b>
+    await sendTelegramMessage(chatId, `💬 <b>Техническая поддержка ManHub</b>
 
 Напишите ваш вопрос в этот чат, и мы ответим вам в ближайшее время.
 
@@ -94,7 +94,7 @@ async function handleStart(chatId: number, user: any, startParam?: string) {
     return;
   }
   
-  const welcomeMessage = `👋 <b>Добро пожаловать в BoysHub!</b>
+  const welcomeMessage = `👋 <b>Добро пожаловать в ManHub!</b>
 
 Это платформа для обмена знаниями и опытом.
 
@@ -105,7 +105,7 @@ async function handleStart(chatId: number, user: any, startParam?: string) {
 • Получать репутацию за полезный контент
 
 🔹 <b>Как начать:</b>
-Откройте мини-приложение, чтобы погрузиться в мир BoysHub!
+Откройте мини-приложение, чтобы погрузиться в мир ManHub!
 
 📱 Нажмите на кнопку меню, чтобы открыть приложение.
 

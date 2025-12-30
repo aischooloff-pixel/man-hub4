@@ -80,7 +80,7 @@ export default function AdminAuth() {
               <Shield className="h-8 w-8 text-primary" />
             </div>
             <h1 className="font-heading text-2xl font-bold">Админ-панель</h1>
-            <p className="text-sm text-muted-foreground">BoysHub Moderation</p>
+            <p className="text-sm text-muted-foreground">ManHub Moderation</p>
           </div>
 
           {/* Login Form */}
