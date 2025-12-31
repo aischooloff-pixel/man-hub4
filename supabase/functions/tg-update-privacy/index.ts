@@ -97,7 +97,9 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
 
   try {
-    const { initData, show_avatar, show_name, show_username } = await req.json();
+    const body = await req.json();
+    const { initData, show_avatar, show_name, show_username, telegram_channel, website, bio } = body;
+    
     if (!initData) {
       return new Response(JSON.stringify({ error: 'initData is required' }), {
         status: 400,
@@ -135,14 +137,31 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Prepare update payload
+    const updatePayload: Record<string, any> = {
+      updated_at: new Date().toISOString(),
+    };
+
+    // Privacy settings
+    if (typeof show_avatar === 'boolean') updatePayload.show_avatar = show_avatar;
+    if (typeof show_name === 'boolean') updatePayload.show_name = show_name;
+    if (typeof show_username === 'boolean') updatePayload.show_username = show_username;
+
+    // Social links (for premium users)
+    if (telegram_channel !== undefined) updatePayload.telegram_channel = telegram_channel;
+    if (website !== undefined) updatePayload.website = website;
+
+    // Bio (for plus/premium users only, max 100 chars, no links)
+    if (bio !== undefined && (profile.subscription_tier === 'plus' || profile.subscription_tier === 'premium')) {
+      // Strip URLs from bio
+      const urlPattern = /(https?:\/\/[^\s]+)|(www\.[^\s]+)|([a-zA-Z0-9-]+\.(com|ru|org|net|io|me|co|app|dev)[^\s]*)/gi;
+      const cleanBio = (bio || '').replace(urlPattern, '').trim().slice(0, 100);
+      updatePayload.bio = cleanBio || null;
+    }
+
     const { data: updated, error } = await supabase
       .from('profiles')
-      .update({
-        show_avatar: typeof show_avatar === 'boolean' ? show_avatar : profile.show_avatar,
-        show_name: typeof show_name === 'boolean' ? show_name : profile.show_name,
-        show_username: typeof show_username === 'boolean' ? show_username : profile.show_username,
-        updated_at: new Date().toISOString(),
-      })
+      .update(updatePayload)
       .eq('id', profile.id)
       .select('*')
       .single();

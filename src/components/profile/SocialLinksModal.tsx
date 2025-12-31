@@ -10,7 +10,9 @@ interface SocialLinksModalProps {
   onClose: () => void;
   initialTelegram?: string;
   initialWebsite?: string;
-  onSave?: (telegram: string, website: string) => void;
+  initialBio?: string;
+  subscriptionTier?: 'free' | 'plus' | 'premium';
+  onSave?: (telegram: string, website: string, bio: string) => void;
 }
 
 export function SocialLinksModal({ 
@@ -18,16 +20,28 @@ export function SocialLinksModal({
   onClose, 
   initialTelegram = '', 
   initialWebsite = '',
+  initialBio = '',
+  subscriptionTier = 'free',
   onSave 
 }: SocialLinksModalProps) {
   const [telegram, setTelegram] = useState(initialTelegram);
   const [website, setWebsite] = useState(initialWebsite);
+  const [bio, setBio] = useState(initialBio);
   const [saved, setSaved] = useState(false);
+
+  const canEditBio = subscriptionTier === 'plus' || subscriptionTier === 'premium';
 
   if (!isOpen) return null;
 
+  const handleBioChange = (value: string) => {
+    // Remove URLs from bio
+    const urlPattern = /(https?:\/\/[^\s]+)|(www\.[^\s]+)|([a-zA-Z0-9-]+\.(com|ru|org|net|io|me|co|app|dev)[^\s]*)/gi;
+    const cleanValue = value.replace(urlPattern, '').trim();
+    setBio(cleanValue.slice(0, 100));
+  };
+
   const handleSave = () => {
-    onSave?.(telegram, website);
+    onSave?.(telegram, website, bio);
     setSaved(true);
     setTimeout(() => {
       setSaved(false);
@@ -106,6 +120,27 @@ export function SocialLinksModal({
                 Укажите ссылку на ваш веб-сайт или блог
               </p>
             </div>
+
+            {/* Bio - only for Plus/Premium */}
+            {canEditBio && (
+              <div className="space-y-2">
+                <Label htmlFor="bio" className="flex items-center gap-2">
+                  📝 Описание профиля
+                </Label>
+                <Input
+                  id="bio"
+                  type="text"
+                  placeholder="Кратко о себе..."
+                  value={bio}
+                  onChange={(e) => handleBioChange(e.target.value)}
+                  className="bg-secondary/50"
+                  maxLength={100}
+                />
+                <p className="text-xs text-muted-foreground">
+                  До 100 символов. Ссылки не поддерживаются.
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Save Button */}

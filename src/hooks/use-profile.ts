@@ -132,26 +132,40 @@ export function useProfile() {
     }
   }, [getInitData, checkAdminRole]);
 
-  // Update social links via direct supabase (public read, service_role write - we keep this simple for now)
-  const updateSocialLinks = async (telegramChannel: string, website: string) => {
-    if (!profile) return false;
+  // Update social links and bio via edge function
+  const updateSocialLinks = useCallback(async (telegramChannel: string, website: string, bio?: string) => {
+    const initData = getInitData();
+    if (!initData || !profile) return false;
 
     try {
-      // We call a simple edge function or use the profile id
-      // For now social links update isn't critical - we can add a dedicated function later
-      // Skipping for simplicity
-      setProfile({
-        ...profile,
-        telegram_channel: telegramChannel || null,
-        website: website || null,
+      const { data, error: fnError } = await supabase.functions.invoke('tg-update-privacy', {
+        body: { 
+          initData, 
+          telegram_channel: telegramChannel || null,
+          website: website || null,
+          bio: bio || null,
+        },
       });
 
+      if (fnError) {
+        const msg = await extractEdgeErrorMessage(fnError);
+        throw new Error(msg);
+      }
+
+      if (data?.profile) {
+        setProfile({
+          ...profile,
+          telegram_channel: data.profile.telegram_channel ?? null,
+          website: data.profile.website ?? null,
+          bio: data.profile.bio ?? null,
+        });
+      }
       return true;
     } catch (err) {
       console.error('Error updating social links:', err);
       return false;
     }
-  };
+  }, [getInitData, profile]);
 
   // Update privacy settings
   const updatePrivacy = useCallback(

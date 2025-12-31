@@ -109,6 +109,11 @@ export function CreateArticleModal({ isOpen, onClose, onSuccess, onDailyLimitRea
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    if (!formData.topic.trim()) {
+      toast.error('Укажите тему статьи');
+      return;
+    }
+
     if (!formData.title.trim()) {
       toast.error('Введите заголовок статьи');
       return;
@@ -191,12 +196,13 @@ export function CreateArticleModal({ isOpen, onClose, onSuccess, onDailyLimitRea
 
           {/* Topic */}
           <div className="space-y-2">
-            <Label>Тема (пару слов о чём статья)</Label>
+            <Label>Тема (пару слов о чём статья) *</Label>
             <Input
               value={formData.topic}
               onChange={(e) => setFormData({ ...formData, topic: e.target.value })}
               placeholder="Например: мотивация, успех"
               maxLength={100}
+              required
             />
           </div>
 

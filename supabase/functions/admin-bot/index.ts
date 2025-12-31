@@ -141,8 +141,10 @@ async function handleStart(chatId: number, userId: number) {
 🎵 /pl — Управление плейлистами
 ❓ /help — Справка
 
-<b>Управление Premium:</b>
-/extend [telegram_id] [дней] — Продлить Premium
+<b>Управление подписками:</b>
+/plus [telegram_id] [дней] — Выдать Plus подписку
+/prem [telegram_id] [дней] — Выдать Premium подписку
+/extend [telegram_id] [дней] — Продлить подписку
 
 <b>Поиск статей:</b>
 /search_st [запрос] — Поиск по заголовку
@@ -296,10 +298,11 @@ async function handleUserProfile(callbackQuery: any, telegramId: string) {
     return;
   }
 
-  const premium = user.is_premium ? '👑 Premium' : '👤 Обычный';
+  const tier = user.subscription_tier || 'free';
+  const tierLabel = tier === 'premium' ? '🟣 Premium' : tier === 'plus' ? '🔵 Plus' : '👤 Free';
   const blocked = user.is_blocked ? '\n🚫 <b>ЗАБЛОКИРОВАН</b>' : '';
   const premiumExpiry = user.premium_expires_at 
-    ? `\n📅 Premium до: ${new Date(user.premium_expires_at).toLocaleDateString('ru-RU')}`
+    ? `\n📅 Подписка до: ${new Date(user.premium_expires_at).toLocaleDateString('ru-RU')}`
     : '';
 
   const profileMessage = `👤 <b>Профиль пользователя</b>${blocked}
@@ -308,18 +311,30 @@ async function handleUserProfile(callbackQuery: any, telegramId: string) {
 🔗 <b>Username:</b> ${user.username ? `@${user.username}` : 'Не указан'}
 🆔 <b>Telegram ID:</b> ${user.telegram_id}
 ⭐ <b>Репутация:</b> ${user.reputation || 0}
-📊 <b>Статус:</b> ${premium}${premiumExpiry}
+📊 <b>Подписка:</b> ${tierLabel}${premiumExpiry}
 📅 <b>Регистрация:</b> ${new Date(user.created_at).toLocaleDateString('ru-RU')}`;
 
   // Build action buttons
   const buttons: any[][] = [];
   
-  // Premium buttons
-  if (user.is_premium) {
-    buttons.push([{ text: '❌ Забрать Premium', callback_data: `premium_revoke:${user.telegram_id}` }]);
-    buttons.push([{ text: '📅 Продлить на 30 дней', callback_data: `premium_extend:${user.telegram_id}:30` }]);
+  // Subscription buttons based on current tier
+  if (tier === 'premium') {
+    buttons.push([
+      { text: '⬇️ Понизить до Plus', callback_data: `sub_downgrade_plus:${user.telegram_id}` },
+      { text: '❌ Забрать подписку', callback_data: `sub_revoke:${user.telegram_id}` }
+    ]);
+    buttons.push([{ text: '📅 Продлить на 30 дней', callback_data: `sub_extend:${user.telegram_id}:30` }]);
+  } else if (tier === 'plus') {
+    buttons.push([
+      { text: '⬆️ Повысить до Premium', callback_data: `sub_upgrade_premium:${user.telegram_id}` },
+      { text: '❌ Забрать подписку', callback_data: `sub_revoke:${user.telegram_id}` }
+    ]);
+    buttons.push([{ text: '📅 Продлить на 30 дней', callback_data: `sub_extend:${user.telegram_id}:30` }]);
   } else {
-    buttons.push([{ text: '👑 Выдать Premium (30 дней)', callback_data: `premium_grant:${user.telegram_id}` }]);
+    buttons.push([
+      { text: '🔵 Выдать Plus (30д)', callback_data: `sub_grant_plus:${user.telegram_id}` },
+      { text: '🟣 Выдать Premium (30д)', callback_data: `sub_grant_premium:${user.telegram_id}` }
+    ]);
   }
 
   // Block/unblock buttons
@@ -418,39 +433,55 @@ async function handleSearch(chatId: number, userId: number, query: string) {
 async function handlePremium(chatId: number, userId: number) {
   if (!isAdmin(userId)) return;
 
+  // Get counts by subscription tier
+  const { count: plusCount } = await supabase
+    .from('profiles')
+    .select('*', { count: 'exact', head: true })
+    .eq('subscription_tier', 'plus');
+
   const { count: premiumCount } = await supabase
     .from('profiles')
     .select('*', { count: 'exact', head: true })
-    .eq('is_premium', true);
+    .eq('subscription_tier', 'premium');
 
-  const { data: premiumUsers } = await supabase
+  const { data: subUsers } = await supabase
     .from('profiles')
-    .select('telegram_id, username, first_name, premium_expires_at')
-    .eq('is_premium', true)
+    .select('telegram_id, username, first_name, subscription_tier, premium_expires_at')
+    .in('subscription_tier', ['plus', 'premium'])
     .order('premium_expires_at', { ascending: true })
-    .limit(10);
+    .limit(15);
 
-  let message = `👑 <b>Управление Premium</b>
+  let message = `👑 <b>Управление подписками</b>
 
-Всего Premium пользователей: <b>${premiumCount || 0}</b>
+📊 <b>Статистика:</b>
+├ Plus: ${plusCount || 0}
+└ Premium: ${premiumCount || 0}
+
+<b>Типы подписок:</b>
+
+🔵 <b>Plus</b> — Безлимит публикаций, ИИ ассистент, био до 100 символов
+🟣 <b>Premium</b> — Всё из Plus + продажа своих продуктов, соц сети в профиле
 
 <b>Команды:</b>
+• /plus [telegram_id] [дней] — выдать Plus
+• /prem [telegram_id] [дней] — выдать Premium
+• /extend [telegram_id] [дней] — продлить текущую подписку
 • /search [username/ID] — найти пользователя
-• /extend [telegram_id] [дней] — продлить подписку
-• Нажмите кнопку на карточке пользователя
 
-<b>Premium пользователи:</b>\n`;
+<b>Подписчики:</b>\n`;
 
-  if (premiumUsers && premiumUsers.length > 0) {
-    for (const user of premiumUsers) {
+  if (subUsers && subUsers.length > 0) {
+    for (const user of subUsers) {
       const username = user.username ? `@${user.username}` : `ID:${user.telegram_id}`;
       const expiry = user.premium_expires_at 
         ? new Date(user.premium_expires_at).toLocaleDateString('ru-RU')
         : '∞';
-      message += `\n👑 <b>${username}</b>\n   📅 До: ${expiry}\n`;
+      const tierIcon = user.subscription_tier === 'premium' ? '🟣' : '🔵';
+      const tierName = user.subscription_tier === 'premium' ? 'Premium' : 'Plus';
+      message += `\n${tierIcon} <b>${username}</b> (${tierName})\n   📅 До: ${expiry}\n`;
     }
   } else {
-    message += '\n<i>Пока нет Premium пользователей</i>';
+    message += '\n<i>Пока нет подписчиков</i>';
   }
 
   await sendAdminMessage(chatId, message);
@@ -685,6 +716,252 @@ async function handleExtendCommand(chatId: number, userId: number, args: string)
 
   const username = profile.username ? `@${profile.username}` : telegramId;
   await sendAdminMessage(chatId, `✅ Premium продлён для ${username} на ${days} дней (до ${newExpiry.toLocaleDateString('ru-RU')})`);
+}
+
+// Handle /plus command - grant Plus subscription
+async function handlePlusCommand(chatId: number, userId: number, args: string) {
+  if (!isAdmin(userId)) return;
+
+  const parts = args.trim().split(/\s+/);
+  if (parts.length < 2) {
+    await sendAdminMessage(chatId, `🔵 <b>Выдача Plus подписки</b>
+
+Используйте:
+<code>/plus [telegram_id] [дней]</code>
+
+<b>Привилегии Plus:</b>
+• ♾ Безлимитные публикации (без ограничения 3/день)
+• 🤖 Доступ к ИИ ассистенту
+• 📝 Описание профиля до 100 символов
+
+Примеры:
+<code>/plus 123456789 30</code> — на 30 дней
+<code>/plus 123456789 90</code> — на 90 дней`);
+    return;
+  }
+
+  const telegramId = parts[0];
+  const days = parseInt(parts[1]);
+
+  if (isNaN(days) || days <= 0 || days > 365) {
+    await sendAdminMessage(chatId, '❌ Укажите количество дней от 1 до 365');
+    return;
+  }
+
+  const { data: profile, error: findError } = await supabase
+    .from('profiles')
+    .select('id, premium_expires_at, subscription_tier, username')
+    .eq('telegram_id', telegramId)
+    .maybeSingle();
+
+  if (findError || !profile) {
+    await sendAdminMessage(chatId, `❌ Пользователь с ID ${telegramId} не найден`);
+    return;
+  }
+
+  let newExpiry: Date;
+  if (profile.premium_expires_at && new Date(profile.premium_expires_at) > new Date()) {
+    newExpiry = new Date(profile.premium_expires_at);
+  } else {
+    newExpiry = new Date();
+  }
+  newExpiry.setDate(newExpiry.getDate() + days);
+
+  const { error } = await supabase
+    .from('profiles')
+    .update({ 
+      subscription_tier: 'plus',
+      is_premium: true,
+      premium_expires_at: newExpiry.toISOString(),
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', profile.id);
+
+  if (error) {
+    await sendAdminMessage(chatId, '❌ Ошибка при выдаче подписки');
+    return;
+  }
+
+  await sendUserMessage(telegramId, `🎉 <b>Поздравляем!</b>
+
+Вам выдана <b>Plus</b> подписка на ${days} дней!
+
+<b>Теперь вам доступны:</b>
+♾ Безлимитные публикации
+🤖 ИИ ассистент
+📝 Описание профиля (до 100 символов)
+
+Подписка активна до: ${newExpiry.toLocaleDateString('ru-RU')}`);
+
+  const username = profile.username ? `@${profile.username}` : telegramId;
+  await sendAdminMessage(chatId, `✅ Plus подписка выдана пользователю ${username} на ${days} дней (до ${newExpiry.toLocaleDateString('ru-RU')})`);
+}
+
+// Handle /prem command - grant Premium subscription
+async function handlePremCommand(chatId: number, userId: number, args: string) {
+  if (!isAdmin(userId)) return;
+
+  const parts = args.trim().split(/\s+/);
+  if (parts.length < 2) {
+    await sendAdminMessage(chatId, `🟣 <b>Выдача Premium подписки</b>
+
+Используйте:
+<code>/prem [telegram_id] [дней]</code>
+
+<b>Привилегии Premium:</b>
+• ♾ Безлимитные публикации
+• 🤖 Доступ к ИИ ассистенту
+• 📝 Описание профиля до 100 символов
+• 👑 Продажа своих продуктов через профиль
+• 📱 Соц сети в профиле
+• ✨ PRO значок
+
+Примеры:
+<code>/prem 123456789 30</code> — на 30 дней
+<code>/prem 123456789 90</code> — на 90 дней`);
+    return;
+  }
+
+  const telegramId = parts[0];
+  const days = parseInt(parts[1]);
+
+  if (isNaN(days) || days <= 0 || days > 365) {
+    await sendAdminMessage(chatId, '❌ Укажите количество дней от 1 до 365');
+    return;
+  }
+
+  const { data: profile, error: findError } = await supabase
+    .from('profiles')
+    .select('id, premium_expires_at, subscription_tier, username')
+    .eq('telegram_id', telegramId)
+    .maybeSingle();
+
+  if (findError || !profile) {
+    await sendAdminMessage(chatId, `❌ Пользователь с ID ${telegramId} не найден`);
+    return;
+  }
+
+  let newExpiry: Date;
+  if (profile.premium_expires_at && new Date(profile.premium_expires_at) > new Date()) {
+    newExpiry = new Date(profile.premium_expires_at);
+  } else {
+    newExpiry = new Date();
+  }
+  newExpiry.setDate(newExpiry.getDate() + days);
+
+  const { error } = await supabase
+    .from('profiles')
+    .update({ 
+      subscription_tier: 'premium',
+      is_premium: true,
+      premium_expires_at: newExpiry.toISOString(),
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', profile.id);
+
+  if (error) {
+    await sendAdminMessage(chatId, '❌ Ошибка при выдаче подписки');
+    return;
+  }
+
+  await sendUserMessage(telegramId, `🎉 <b>Поздравляем!</b>
+
+Вам выдана <b>Premium</b> подписка на ${days} дней!
+
+<b>Теперь вам доступны:</b>
+👑 Продажа продуктов через профиль
+📱 Соц сети в профиле
+🤖 ИИ ассистент
+📝 Описание профиля (до 100 символов)
+♾ Безлимит публикаций
+✨ PRO значок
+
+Подписка активна до: ${newExpiry.toLocaleDateString('ru-RU')}`);
+
+  const username = profile.username ? `@${profile.username}` : telegramId;
+  await sendAdminMessage(chatId, `✅ Premium подписка выдана пользователю ${username} на ${days} дней (до ${newExpiry.toLocaleDateString('ru-RU')})`);
+}
+
+// Subscription callback handlers
+async function handleSubGrantPlus(callbackQuery: any, telegramId: string) {
+  const { id, message } = callbackQuery;
+  const expiresAt = new Date();
+  expiresAt.setDate(expiresAt.getDate() + 30);
+
+  const { data: profile } = await supabase.from('profiles').select('id, username').eq('telegram_id', telegramId).maybeSingle();
+  if (!profile) { await answerCallbackQuery(id, '❌ Не найден'); return; }
+
+  await supabase.from('profiles').update({ subscription_tier: 'plus', is_premium: true, premium_expires_at: expiresAt.toISOString(), updated_at: new Date().toISOString() }).eq('id', profile.id);
+  await sendUserMessage(telegramId, `🎉 Вам выдана <b>Plus</b> подписка на 30 дней!\n\n♾ Безлимит публикаций\n🤖 ИИ ассистент\n📝 Описание профиля\n\nДо: ${expiresAt.toLocaleDateString('ru-RU')}`);
+  await answerCallbackQuery(id, '✅ Plus выдан');
+  await editMessageReplyMarkup(message.chat.id, message.message_id);
+  await sendAdminMessage(message.chat.id, `✅ Plus выдан ${profile.username ? '@' + profile.username : telegramId}`);
+}
+
+async function handleSubGrantPremium(callbackQuery: any, telegramId: string) {
+  const { id, message } = callbackQuery;
+  const expiresAt = new Date();
+  expiresAt.setDate(expiresAt.getDate() + 30);
+
+  const { data: profile } = await supabase.from('profiles').select('id, username').eq('telegram_id', telegramId).maybeSingle();
+  if (!profile) { await answerCallbackQuery(id, '❌ Не найден'); return; }
+
+  await supabase.from('profiles').update({ subscription_tier: 'premium', is_premium: true, premium_expires_at: expiresAt.toISOString(), updated_at: new Date().toISOString() }).eq('id', profile.id);
+  await sendUserMessage(telegramId, `🎉 Вам выдана <b>Premium</b> подписка на 30 дней!\n\n👑 Продажа продуктов\n📱 Соц сети\n🤖 ИИ ассистент\n♾ Безлимит\n\nДо: ${expiresAt.toLocaleDateString('ru-RU')}`);
+  await answerCallbackQuery(id, '✅ Premium выдан');
+  await editMessageReplyMarkup(message.chat.id, message.message_id);
+  await sendAdminMessage(message.chat.id, `✅ Premium выдан ${profile.username ? '@' + profile.username : telegramId}`);
+}
+
+async function handleSubUpgradePremium(callbackQuery: any, telegramId: string) {
+  const { id, message } = callbackQuery;
+  const { data: profile } = await supabase.from('profiles').select('id, username, premium_expires_at').eq('telegram_id', telegramId).maybeSingle();
+  if (!profile) { await answerCallbackQuery(id, '❌ Не найден'); return; }
+
+  await supabase.from('profiles').update({ subscription_tier: 'premium', updated_at: new Date().toISOString() }).eq('id', profile.id);
+  await sendUserMessage(telegramId, `🎉 Ваша подписка повышена до <b>Premium</b>!\n\nТеперь доступны: продажа продуктов, соц сети в профиле`);
+  await answerCallbackQuery(id, '✅ Повышен до Premium');
+  await editMessageReplyMarkup(message.chat.id, message.message_id);
+  await sendAdminMessage(message.chat.id, `✅ Повышен до Premium: ${profile.username ? '@' + profile.username : telegramId}`);
+}
+
+async function handleSubDowngradePlus(callbackQuery: any, telegramId: string) {
+  const { id, message } = callbackQuery;
+  const { data: profile } = await supabase.from('profiles').select('id, username').eq('telegram_id', telegramId).maybeSingle();
+  if (!profile) { await answerCallbackQuery(id, '❌ Не найден'); return; }
+
+  await supabase.from('profiles').update({ subscription_tier: 'plus', updated_at: new Date().toISOString() }).eq('id', profile.id);
+  await sendUserMessage(telegramId, `ℹ️ Ваша подписка изменена на <b>Plus</b>`);
+  await answerCallbackQuery(id, '✅ Понижен до Plus');
+  await editMessageReplyMarkup(message.chat.id, message.message_id);
+  await sendAdminMessage(message.chat.id, `✅ Понижен до Plus: ${profile.username ? '@' + profile.username : telegramId}`);
+}
+
+async function handleSubRevoke(callbackQuery: any, telegramId: string) {
+  const { id, message } = callbackQuery;
+  const { data: profile } = await supabase.from('profiles').select('id, username').eq('telegram_id', telegramId).maybeSingle();
+  if (!profile) { await answerCallbackQuery(id, '❌ Не найден'); return; }
+
+  await supabase.from('profiles').update({ subscription_tier: 'free', is_premium: false, premium_expires_at: null, updated_at: new Date().toISOString() }).eq('id', profile.id);
+  await sendUserMessage(telegramId, `ℹ️ Ваша подписка отменена`);
+  await answerCallbackQuery(id, '✅ Подписка отозвана');
+  await editMessageReplyMarkup(message.chat.id, message.message_id);
+  await sendAdminMessage(message.chat.id, `❌ Подписка отозвана: ${profile.username ? '@' + profile.username : telegramId}`);
+}
+
+async function handleSubExtend(callbackQuery: any, telegramId: string, days: number) {
+  const { id, message } = callbackQuery;
+  const { data: profile } = await supabase.from('profiles').select('id, username, premium_expires_at').eq('telegram_id', telegramId).maybeSingle();
+  if (!profile) { await answerCallbackQuery(id, '❌ Не найден'); return; }
+
+  let newExpiry = profile.premium_expires_at && new Date(profile.premium_expires_at) > new Date() ? new Date(profile.premium_expires_at) : new Date();
+  newExpiry.setDate(newExpiry.getDate() + days);
+
+  await supabase.from('profiles').update({ premium_expires_at: newExpiry.toISOString(), updated_at: new Date().toISOString() }).eq('id', profile.id);
+  await sendUserMessage(telegramId, `🎉 Подписка продлена на ${days} дней!\nДо: ${newExpiry.toLocaleDateString('ru-RU')}`);
+  await answerCallbackQuery(id, '✅ Продлено');
+  await editMessageReplyMarkup(message.chat.id, message.message_id);
+  await sendAdminMessage(message.chat.id, `✅ Продлено на ${days}д: ${profile.username ? '@' + profile.username : telegramId}`);
 }
 
 // Handle block user
@@ -2328,6 +2605,18 @@ async function handleCallbackQuery(callbackQuery: any) {
     await handleReviewDelete(callbackQuery, param);
   } else if (action === 'review_search_delete') {
     await handleReviewSearchDelete(callbackQuery, param);
+  } else if (action === 'sub_grant_plus') {
+    await handleSubGrantPlus(callbackQuery, param);
+  } else if (action === 'sub_grant_premium') {
+    await handleSubGrantPremium(callbackQuery, param);
+  } else if (action === 'sub_upgrade_premium') {
+    await handleSubUpgradePremium(callbackQuery, param);
+  } else if (action === 'sub_downgrade_plus') {
+    await handleSubDowngradePlus(callbackQuery, param);
+  } else if (action === 'sub_revoke') {
+    await handleSubRevoke(callbackQuery, param);
+  } else if (action === 'sub_extend') {
+    await handleSubExtend(callbackQuery, param, parseInt(param2 || '30'));
   }
 }
 
@@ -2775,6 +3064,16 @@ Deno.serve(async (req) => {
         await handleExtendCommand(chat.id, from.id, args);
       } else if (text === '/extend') {
         await handleExtendCommand(chat.id, from.id, '');
+      } else if (text?.startsWith('/plus ')) {
+        const args = text.replace('/plus ', '').trim();
+        await handlePlusCommand(chat.id, from.id, args);
+      } else if (text === '/plus') {
+        await handlePlusCommand(chat.id, from.id, '');
+      } else if (text?.startsWith('/prem ')) {
+        const args = text.replace('/prem ', '').trim();
+        await handlePremCommand(chat.id, from.id, args);
+      } else if (text === '/prem') {
+        await handlePremCommand(chat.id, from.id, '');
       } else if (text === '/pending') {
         await handlePending(chat.id, from.id);
       } else if (text === '/st') {

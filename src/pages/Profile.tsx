@@ -142,10 +142,10 @@ export default function Profile() {
     loadRep();
   }, [getMyReputation]);
 
-  const handleSaveSocialLinks = async (telegram: string, website: string) => {
-    const success = await updateSocialLinks(telegram, website);
+  const handleSaveSocialLinks = async (telegram: string, website: string, bio: string) => {
+    const success = await updateSocialLinks(telegram, website, bio);
     if (success) {
-      toast.success('Социальные ссылки обновлены');
+      toast.success('Данные профиля обновлены');
       setIsSocialLinksOpen(false);
     } else {
       toast.error('Ошибка сохранения');
@@ -353,6 +353,11 @@ export default function Profile() {
               <Settings className="h-5 w-5" />
             </Button>
           </div>
+
+          {/* Bio for Plus/Premium users */}
+          {(profile.subscription_tier === 'plus' || profile.subscription_tier === 'premium') && profile.bio && (
+            <p className="mt-3 text-sm text-muted-foreground">{profile.bio}</p>
+          )}
 
           {/* Products Button for Premium users */}
           {profile.subscription_tier === 'premium' && (
@@ -624,6 +629,8 @@ export default function Profile() {
         onClose={() => setIsSocialLinksOpen(false)}
         initialTelegram={profile.telegram_channel || ''}
         initialWebsite={profile.website || ''}
+        initialBio={profile.bio || ''}
+        subscriptionTier={profile.subscription_tier}
         onSave={handleSaveSocialLinks}
       />
       <SupportModal isOpen={isSupportOpen} onClose={() => setIsSupportOpen(false)} />
