@@ -22,6 +22,9 @@ export interface Profile {
   show_username: boolean;
   subscription_tier: SubscriptionTier;
   bio: string | null;
+  referral_code: string | null;
+  referred_by: string | null;
+  referral_earnings: number;
 }
 
 async function extractEdgeErrorMessage(err: any): Promise<string> {
@@ -109,6 +112,9 @@ export function useProfile() {
           show_username: data.profile.show_username ?? true,
           subscription_tier: data.profile.subscription_tier || 'free',
           bio: data.profile.bio || null,
+          referral_code: data.profile.referral_code || null,
+          referred_by: data.profile.referred_by || null,
+          referral_earnings: data.profile.referral_earnings || 0,
         };
         setProfile(profileData);
         setArticlesCount(data.articlesCount || 0);

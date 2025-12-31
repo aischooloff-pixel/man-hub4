@@ -11,10 +11,11 @@ import { ReputationHistoryModal } from '@/components/profile/ReputationHistoryMo
 import { SocialLinksModal } from '@/components/profile/SocialLinksModal';
 import { SupportModal } from '@/components/profile/SupportModal';
 import { ProductsModal } from '@/components/profile/ProductsModal';
+import { ReferralModal } from '@/components/profile/ReferralModal';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Settings, Crown, FileText, Bookmark, History, Star, Send, Globe, HelpCircle, MessageCircle, Heart, MessageSquare, PenLine, Trash2, Package } from 'lucide-react';
+import { Settings, Crown, FileText, Bookmark, History, Star, Send, Globe, HelpCircle, MessageCircle, Heart, MessageSquare, PenLine, Trash2, Package, Users } from 'lucide-react';
 import { useProfile } from '@/hooks/use-profile';
 import { useArticles, Article } from '@/hooks/use-articles';
 import { useReputation } from '@/hooks/use-reputation';
@@ -47,6 +48,7 @@ export default function Profile() {
   const [isSocialLinksOpen, setIsSocialLinksOpen] = useState(false);
   const [isSupportOpen, setIsSupportOpen] = useState(false);
   const [isProductsOpen, setIsProductsOpen] = useState(false);
+  const [isReferralOpen, setIsReferralOpen] = useState(false);
   const [userArticles, setUserArticles] = useState<Article[]>([]);
   const [articlesLoading, setArticlesLoading] = useState(true);
   const [reputation, setReputation] = useState(0);
@@ -591,8 +593,29 @@ export default function Profile() {
             </TabsContent>
           </Tabs>
 
-          {/* Support Section */}
+          {/* Referral Section */}
           <div className="mt-6 rounded-2xl bg-card p-4">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-500/10">
+                <Users className="h-5 w-5 text-green-500" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-heading text-base font-semibold">Реферальная система</h3>
+                <p className="text-xs text-muted-foreground">Получай 50% от покупок приглашённых</p>
+              </div>
+            </div>
+            <Button 
+              onClick={() => setIsReferralOpen(true)} 
+              className="w-full gap-2"
+              variant="outline"
+            >
+              <Users className="h-4 w-4" />
+              Пригласить друзей
+            </Button>
+          </div>
+
+          {/* Support Section */}
+          <div className="mt-4 rounded-2xl bg-card p-4">
             <div className="flex items-center gap-3 mb-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
                 <HelpCircle className="h-5 w-5 text-primary" />
@@ -648,6 +671,11 @@ export default function Profile() {
         onSave={handleSaveSocialLinks}
       />
       <SupportModal isOpen={isSupportOpen} onClose={() => setIsSupportOpen(false)} />
+      <ReferralModal 
+        isOpen={isReferralOpen} 
+        onClose={() => setIsReferralOpen(false)} 
+        referralCode={profile.referral_code} 
+      />
       {profile && (
         <ProductsModal 
           isOpen={isProductsOpen} 

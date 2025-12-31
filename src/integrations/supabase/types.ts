@@ -578,6 +578,9 @@ export type Database = {
           is_premium: boolean | null
           last_name: string | null
           premium_expires_at: string | null
+          referral_code: string | null
+          referral_earnings: number | null
+          referred_by: string | null
           reputation: number | null
           show_avatar: boolean
           show_name: boolean
@@ -601,6 +604,9 @@ export type Database = {
           is_premium?: boolean | null
           last_name?: string | null
           premium_expires_at?: string | null
+          referral_code?: string | null
+          referral_earnings?: number | null
+          referred_by?: string | null
           reputation?: number | null
           show_avatar?: boolean
           show_name?: boolean
@@ -624,6 +630,9 @@ export type Database = {
           is_premium?: boolean | null
           last_name?: string | null
           premium_expires_at?: string | null
+          referral_code?: string | null
+          referral_earnings?: number | null
+          referred_by?: string | null
           reputation?: number | null
           show_avatar?: boolean
           show_name?: boolean
@@ -636,7 +645,15 @@ export type Database = {
           username?: string | null
           website?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_referred_by_fkey"
+            columns: ["referred_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       promo_code_usages: {
         Row: {
@@ -702,6 +719,51 @@ export type Database = {
           uses_count?: number
         }
         Relationships: []
+      }
+      referral_earnings: {
+        Row: {
+          created_at: string
+          earning_amount: number
+          id: string
+          purchase_amount: number
+          purchase_type: string
+          referred_id: string
+          referrer_id: string
+        }
+        Insert: {
+          created_at?: string
+          earning_amount: number
+          id?: string
+          purchase_amount: number
+          purchase_type: string
+          referred_id: string
+          referrer_id: string
+        }
+        Update: {
+          created_at?: string
+          earning_amount?: number
+          id?: string
+          purchase_amount?: number
+          purchase_type?: string
+          referred_id?: string
+          referrer_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "referral_earnings_referred_id_fkey"
+            columns: ["referred_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "referral_earnings_referrer_id_fkey"
+            columns: ["referrer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       reputation_history: {
         Row: {
@@ -1028,6 +1090,7 @@ export type Database = {
     }
     Functions: {
       generate_product_code: { Args: never; Returns: string }
+      generate_referral_code: { Args: never; Returns: string }
       generate_short_id: { Args: never; Returns: string }
       get_or_create_short_id: {
         Args: { p_article_id: string }
